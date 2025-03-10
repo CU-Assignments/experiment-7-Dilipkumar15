@@ -1,0 +1,165 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.Scanner;
+
+public class ProductCRUD {
+    static final String URL = "jdbc:mysql://localhost:3306/your_database_name";
+    static final String USER = "your_username";
+    static final String PASSWORD = "your_password";
+
+    public static void main(String[] args) {
+        try (Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
+             Scanner scanner = new Scanner(System.in)) {
+
+            Class.forName("com.mysql.cj.jdbc.Driver");
+            connection.setAutoCommit(false);
+
+            while (true) {
+                System.out.println("\nProduct Management System");
+                System.out.println("1. Create Product");
+                System.out.println("2. Read Products");
+                System.out.println("3. Update Product");
+                System.out.println("4. Delete Product");
+                System.out.println("5. Exit");
+                System.out.print("Choose an option: ");
+                int choice = scanner.nextInt();
+
+                switch (choice) {
+                    case 1:
+                        createProduct(connection, scanner);
+                        break;
+                    case 2:
+                        readProducts(connection);
+                        break;
+                    case 3:
+                        updateProduct(connection, scanner);
+                        break;
+                    case 4:
+                        deleteProduct(connection, scanner);
+                        break;
+                    case 5:
+                        System.out.println("Exiting...");
+                        connection.close();
+                        return;
+                    default:
+                        System.out.println("Invalid option. Try again.");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void createProduct(Connection connection, Scanner scanner) {
+        String query = "INSERT INTO Product (ProductID, ProductName, Price, Quantity) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            System.out.print("Enter Product ID: ");
+            int id = scanner.nextInt();
+            System.out.print("Enter Product Name: ");
+            scanner.nextLine();
+            String name = scanner.nextLine();
+            System.out.print("Enter Price: ");
+            double price = scanner.nextDouble();
+            System.out.print("Enter Quantity: ");
+            int quantity = scanner.nextInt();
+
+            ps.setInt(1, id);
+            ps.setString(2, name);
+            ps.setDouble(3, price);
+            ps.setInt(4, quantity);
+
+            ps.executeUpdate();
+            connection.commit();
+            System.out.println("Product added successfully.");
+        } catch (Exception e) {
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            e.printStackTrace();
+        }
+    }
+
+    static void readProducts(Connection connection) {
+        String query = "SELECT * FROM Product";
+        try (Statement statement = connection.createStatement();
+             ResultSet resultSet = statement.executeQuery(query)) {
+
+            System.out.println("\nProductID\tProductName\tPrice\tQuantity");
+            System.out.println("------------------------------------------------");
+            while (resultSet.next()) {
+                int id = resultSet.getInt("ProductID");
+                String name = resultSet.getString("ProductName");
+                double price = resultSet.getDouble("Price");
+                int quantity = resultSet.getInt("Quantity");
+                System.out.println(id + "\t\t" + name + "\t\t" + price + "\t" + quantity);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void updateProduct(Connection connection, Scanner scanner) {
+        String query = "UPDATE Product SET ProductName = ?, Price = ?, Quantity = ? WHERE ProductID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            System.out.print("Enter Product ID to update: ");
+            int id = scanner.nextInt();
+            System.out.print("Enter new Product Name: ");
+            scanner.nextLine();
+            String name = scanner.nextLine();
+            System.out.print("Enter new Price: ");
+            double price = scanner.nextDouble();
+            System.out.print("Enter new Quantity: ");
+            int quantity = scanner.nextInt();
+
+            ps.setString(1, name);
+            ps.setDouble(2, price);
+            ps.setInt(3, quantity);
+            ps.setInt(4, id);
+
+            int rowsAffected = ps.executeUpdate();
+            if (rowsAffected > 0) {
+                connection.commit();
+                System.out.println("Product updated successfully.");
+            } else {
+                System.out.println("Product not found.");
+            }
+        } catch (Exception e) {
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            e.printStackTrace();
+        }
+    }
+
+    static void deleteProduct(Connection connection, Scanner scanner) {
+        String query = "DELETE FROM Product WHERE ProductID = ?";
+        try (PreparedStatement ps = connection.prepareStatement(query)) {
+            System.out.print("Enter Product ID to delete: ");
+            int id = scanner.nextInt();
+
+            ps.setInt(1, id);
+            int rowsAffected = ps.executeUpdate();
+
+            if (rowsAffected > 0) {
+                connection.commit();
+                System.out.println("Product deleted successfully.");
+            } else {
+                System.out.println("Product not found.");
+            }
+        } catch (Exception e) {
+            try {
+                connection.rollback();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            e.printStackTrace();
+        }
+    }
+}
